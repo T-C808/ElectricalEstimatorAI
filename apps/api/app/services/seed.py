@@ -206,7 +206,7 @@ def _assembly(
         "name": name,
         "version": 1,
         "category": category,
-        "parameters": parameters or COMMON_PARAMETERS,
+        "parameters": COMMON_PARAMETERS if parameters is None else parameters,
         "base_materials": base_materials,
         "base_labor": base_labor,
         "assumptions": assumptions,

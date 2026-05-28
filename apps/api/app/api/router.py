@@ -73,6 +73,7 @@ from app.schemas import (
 )
 from app.services.estimate_service import (
     EstimateServiceError,
+    EstimateValidationError,
     calculate_estimate,
     load_estimate_detail,
 )
@@ -524,6 +525,8 @@ def calculate_estimate_endpoint(
         estimate = load_estimate_detail(db, estimate.id)
     except EstimateServiceError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except EstimateValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     assumptions = [note.note for note in estimate.notes if note.note_type == "assumption"]
     exclusions = [note.note for note in estimate.notes if note.note_type == "exclusion"]
     return {

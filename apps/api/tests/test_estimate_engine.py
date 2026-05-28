@@ -2,11 +2,12 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.models import Assembly, Customer, Estimate, EstimateAssembly, Job, MarginProfile, Material
-from app.services.estimate_service import calculate_estimate
+from app.services.estimate_service import EstimateValidationError, calculate_estimate
 
 
 def _create_estimate(db: Session, assembly_code: str, params: dict) -> Estimate:
@@ -68,6 +69,22 @@ def test_ats_assembly_generates_totals_flags_and_snapshot(db_session: Session) -
     db_session.commit()
     original_line = next(line for line in calculated.line_items if line.sku == "ATS-600-BYPASS")
     assert original_line.unit_cost == Decimal("18500.00")
+
+
+def test_empty_estimate_cannot_be_calculated(db_session: Session) -> None:
+    customer = Customer(company_name="Empty Estimate Customer")
+    db_session.add(customer)
+    db_session.flush()
+    job = Job(customer_id=customer.id, job_name="Empty Estimate Job")
+    db_session.add(job)
+    db_session.flush()
+    margin = db_session.scalar(select(MarginProfile).where(MarginProfile.active == True))  # noqa: E712
+    estimate = Estimate(job_id=job.id, margin_profile_id=margin.id)
+    db_session.add(estimate)
+    db_session.commit()
+
+    with pytest.raises(EstimateValidationError):
+        calculate_estimate(db_session, estimate.id)
 
 
 def test_feeder_length_drives_material_quantities(db_session: Session) -> None:
@@ -138,3 +155,15 @@ def test_neta_adds_labor_exclusion_and_review_flag(db_session: Session) -> None:
     assert any(line.sku == "NETA-SUPPORT" for line in calculated.line_items)
     assert any(flag.flag_code == "NETA_TESTING_SELECTED" for flag in calculated.review_flags)
     assert any("Third-party NETA testing fees" in note.note for note in calculated.notes)
+
+
+def test_standalone_allowance_assemblies_do_not_require_feeder_parameters(
+    db_session: Session,
+) -> None:
+    shutdown = db_session.scalar(select(Assembly).where(Assembly.code == "SHUTDOWN-COORD"))
+    neta = db_session.scalar(select(Assembly).where(Assembly.code == "NETA-SUPPORT"))
+    grounding = db_session.scalar(select(Assembly).where(Assembly.code == "GROUNDING-BONDING"))
+
+    assert shutdown.parameters == []
+    assert neta.parameters == []
+    assert grounding.parameters == []

@@ -11,7 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import type * as React from "react";
-import { useEffect, useMemo, useState } from "react";
+import { forwardRef, useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -693,6 +693,8 @@ function EstimateBuilder() {
   const exclusions =
     estimate.data?.notes?.filter((note) => note.note_type === "exclusion") ??
     [];
+  const selectedAssemblyCount = estimate.data?.assemblies?.length ?? 0;
+  const canCalculate = Boolean(estimateId) && selectedAssemblyCount > 0;
 
   return (
     <div className="space-y-4">
@@ -828,11 +830,17 @@ function EstimateBuilder() {
           </div>
           <button
             className="focus-ring mt-4 w-full rounded bg-copper px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-            disabled={!estimateId || calculate.isPending}
+            disabled={!canCalculate || calculate.isPending}
             onClick={() => calculate.mutate()}
           >
             Calculate Estimate
           </button>
+          {!canCalculate ? (
+            <div className="mt-2 rounded border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              Create or select an estimate, then add at least one assembly
+              before calculating.
+            </div>
+          ) : null}
         </Panel>
       </div>
 
@@ -1063,60 +1071,69 @@ type TextInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   label: string;
   error?: string;
 };
-function TextInput({ label, error, ...props }: TextInputProps) {
-  return (
-    <label className="block text-sm">
-      <span className="mb-1 block text-slate-700">{label}</span>
-      <input
-        className="focus-ring w-full rounded border border-slate-300 px-3 py-2"
-        {...props}
-      />
-      {error ? (
-        <span className="mt-1 block text-xs text-red-700">{error}</span>
-      ) : null}
-    </label>
-  );
-}
+const TextInput = forwardRef<HTMLInputElement, TextInputProps>(
+  function TextInput({ label, error, ...props }, ref) {
+    return (
+      <label className="block text-sm">
+        <span className="mb-1 block text-slate-700">{label}</span>
+        <input
+          ref={ref}
+          className="focus-ring w-full rounded border border-slate-300 px-3 py-2"
+          {...props}
+        />
+        {error ? (
+          <span className="mt-1 block text-xs text-red-700">{error}</span>
+        ) : null}
+      </label>
+    );
+  },
+);
 
 type TextAreaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> & {
   label: string;
   error?: string;
 };
-function TextArea({ label, error, ...props }: TextAreaProps) {
-  return (
-    <label className="block text-sm">
-      <span className="mb-1 block text-slate-700">{label}</span>
-      <textarea
-        className="focus-ring min-h-20 w-full rounded border border-slate-300 px-3 py-2"
-        {...props}
-      />
-      {error ? (
-        <span className="mt-1 block text-xs text-red-700">{error}</span>
-      ) : null}
-    </label>
-  );
-}
+const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
+  function TextArea({ label, error, ...props }, ref) {
+    return (
+      <label className="block text-sm">
+        <span className="mb-1 block text-slate-700">{label}</span>
+        <textarea
+          ref={ref}
+          className="focus-ring min-h-20 w-full rounded border border-slate-300 px-3 py-2"
+          {...props}
+        />
+        {error ? (
+          <span className="mt-1 block text-xs text-red-700">{error}</span>
+        ) : null}
+      </label>
+    );
+  },
+);
 
 type SelectInputProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
   label: string;
   error?: string;
 };
-function SelectInput({ label, error, children, ...props }: SelectInputProps) {
-  return (
-    <label className="block text-sm">
-      <span className="mb-1 block text-slate-700">{label}</span>
-      <select
-        className="focus-ring w-full rounded border border-slate-300 bg-white px-3 py-2"
-        {...props}
-      >
-        {children}
-      </select>
-      {error ? (
-        <span className="mt-1 block text-xs text-red-700">{error}</span>
-      ) : null}
-    </label>
-  );
-}
+const SelectInput = forwardRef<HTMLSelectElement, SelectInputProps>(
+  function SelectInput({ label, error, children, ...props }, ref) {
+    return (
+      <label className="block text-sm">
+        <span className="mb-1 block text-slate-700">{label}</span>
+        <select
+          ref={ref}
+          className="focus-ring w-full rounded border border-slate-300 bg-white px-3 py-2"
+          {...props}
+        >
+          {children}
+        </select>
+        {error ? (
+          <span className="mt-1 block text-xs text-red-700">{error}</span>
+        ) : null}
+      </label>
+    );
+  },
+);
 
 function SubmitButton({ label, pending }: { label: string; pending: boolean }) {
   return (

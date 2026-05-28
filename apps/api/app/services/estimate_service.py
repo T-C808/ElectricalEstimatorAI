@@ -37,6 +37,10 @@ class EstimateServiceError(ValueError):
     pass
 
 
+class EstimateValidationError(ValueError):
+    pass
+
+
 def load_estimate_detail(db: Session, estimate_id: uuid.UUID) -> Estimate:
     estimate = db.scalar(
         select(Estimate)
@@ -68,6 +72,8 @@ def load_estimate_detail(db: Session, estimate_id: uuid.UUID) -> Estimate:
 
 def calculate_estimate(db: Session, estimate_id: uuid.UUID) -> Estimate:
     estimate = load_estimate_detail(db, estimate_id)
+    if not estimate.assemblies:
+        raise EstimateValidationError("Add at least one assembly before calculating an estimate.")
     margin = estimate.margin_profile
 
     manual_lines = [line for line in estimate.line_items if line.source_type == "manual"]
